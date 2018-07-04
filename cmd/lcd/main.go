@@ -36,6 +36,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -55,7 +56,16 @@ func main() {
 		if err := complete(*compl, os.Stdout, f); err != nil {
 			log.Fatal(err)
 		}
-	} else {
+	} else if nArg := flag.NArg(); nArg > 0 {
+		if nArg > 1 {
+			n, err := strconv.Atoi(flag.Arg(1))
+			if err == nil {
+				if err := matchingN(flag.Arg(0), n, os.Stdout, f); err != nil {
+					log.Fatal(err)
+				}
+				return
+			}
+		}
 		if err := matching(flag.Arg(0), os.Stdout, f); err != nil {
 			log.Fatal(err)
 		}
@@ -80,6 +90,28 @@ func matching(word string, w io.Writer, r io.Reader) error {
 			continue
 		}
 		if st.IsDir() {
+			fmt.Fprintln(w, s)
+		}
+	}
+	return sc.Err()
+}
+
+func matchingN(word string, idx int, w io.Writer, r io.Reader) error {
+	suffix := []byte(pathSep + strings.TrimSuffix(word, pathSep))
+	sc := bufio.NewScanner(r)
+	i := 0
+	for sc.Scan() {
+		line := sc.Bytes()
+		if !bytes.HasSuffix(line, suffix) {
+			continue
+		}
+		s := string(line)
+		st, err := os.Stat(s)
+		if err != nil || !st.IsDir() {
+			continue
+		}
+		i++
+		if i == idx {
 			fmt.Fprintln(w, s)
 		}
 	}

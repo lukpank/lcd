@@ -72,6 +72,65 @@ func TestMatching(t *testing.T) {
 	}
 }
 
+func TestMatchingN(t *testing.T) {
+	d := newTestData(t, cache)
+	defer d.Close()
+	cases := []struct {
+		word     string
+		expected string
+		num      int
+	}{
+		{
+			"lukpank",
+			d.ConvertPath("/home/user/go/src/github.com/lukpank") + "\n",
+			1,
+		},
+		{
+			"lukpank",
+			"",
+			2,
+		},
+		{
+			"glpk",
+			d.ConvertPath("/home/user/go/src/github.com/lukpank/go-glpk/glpk") + "\n",
+			1,
+		},
+		{
+			"jsonlexer",
+			d.ConvertPath("/home/user/go/src/github.com/lukpank/jsonlexer") + "\n",
+			1,
+		},
+		{
+			"lcd",
+			d.ConvertPath("/home/user/go/src/github.com/lukpank/lcd") + "\n",
+			1,
+		},
+		{
+			"lcd",
+			d.ConvertPath("/home/user/go/src/github.com/lukpank/lcd/cmd/lcd") + "\n",
+			2,
+		},
+		{
+			"lcd",
+			"",
+			3,
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.word, func(t *testing.T) {
+			var b bytes.Buffer
+			err := matchingN(c.word, c.num, &b, strings.NewReader(d.Cache))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := b.String(); c.expected != got {
+				t.Errorf("expected %q but got %q", c.expected, got)
+			}
+		})
+	}
+}
+
 func TestComplete(t *testing.T) {
 	d := newTestData(t, cache)
 	defer d.Close()
