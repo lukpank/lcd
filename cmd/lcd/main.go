@@ -33,7 +33,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -48,26 +47,30 @@ func main() {
 	}
 	f, err := os.Open(filepath.Join(os.Getenv("HOME"), ".lcd", "cache"))
 	if err != nil {
-		log.Fatal(err)
+		fmt.Fprintf(os.Stderr, "lcd: %v\n", err)
+		os.Exit(1)
 	}
 	defer f.Close()
 
 	if *compl != "" {
 		if err := complete(*compl, os.Stdout, f); err != nil {
-			log.Fatal(err)
+			fmt.Fprintf(os.Stderr, "lcd: %v\n", err)
+			os.Exit(1)
 		}
 	} else if nArg := flag.NArg(); nArg > 0 {
 		if nArg > 1 {
 			n, err := strconv.Atoi(flag.Arg(1))
 			if err == nil {
 				if err := matchingN(flag.Arg(0), n, os.Stdout, f); err != nil {
-					log.Fatal(err)
+					fmt.Fprintf(os.Stderr, "lcd: %v\n", err)
+					os.Exit(1)
 				}
 				return
 			}
 		}
 		if err := matching(flag.Arg(0), os.Stdout, f); err != nil {
-			log.Fatal(err)
+			fmt.Fprintf(os.Stderr, "lcd: %v\n", err)
+			os.Exit(1)
 		}
 	}
 }
@@ -78,6 +81,7 @@ var pathSepB = []byte{os.PathSeparator}
 
 func matching(word string, w io.Writer, r io.Reader) error {
 	suffix := []byte(pathSep + strings.TrimSuffix(word, pathSep))
+	found := false
 	sc := bufio.NewScanner(r)
 	for sc.Scan() {
 		line := bytes.TrimSuffix(sc.Bytes(), pathSepB)
@@ -90,16 +94,24 @@ func matching(word string, w io.Writer, r io.Reader) error {
 			continue
 		}
 		if st.IsDir() {
+			found = true
 			fmt.Fprintln(w, s)
 		}
 	}
-	return sc.Err()
+	if err := sc.Err(); err != nil {
+		return err
+	}
+	if !found {
+		return fmt.Errorf("%q: directory not found", word)
+	}
+	return nil
 }
 
 func matchingN(word string, idx int, w io.Writer, r io.Reader) error {
 	suffix := []byte(pathSep + strings.TrimSuffix(word, pathSep))
-	sc := bufio.NewScanner(r)
+	found := false
 	i := 0
+	sc := bufio.NewScanner(r)
 	for sc.Scan() {
 		line := sc.Bytes()
 		if !bytes.HasSuffix(line, suffix) {
@@ -112,10 +124,17 @@ func matchingN(word string, idx int, w io.Writer, r io.Reader) error {
 		}
 		i++
 		if i == idx {
+			found = true
 			fmt.Fprintln(w, s)
 		}
 	}
-	return sc.Err()
+	if err := sc.Err(); err != nil {
+		return err
+	}
+	if !found {
+		return fmt.Errorf("%q %d: directory not found", word, idx)
+	}
+	return nil
 }
 
 func complete(prefix string, w io.Writer, r io.Reader) error {

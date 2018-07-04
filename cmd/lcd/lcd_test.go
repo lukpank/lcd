@@ -56,6 +56,10 @@ func TestMatching(t *testing.T) {
 			"lcd",
 			d.ConvertPath("/home/user/go/src/github.com/lukpank/lcd") + "\n" + d.ConvertPath("/home/user/go/src/github.com/lukpank/lcd/cmd/lcd") + "\n",
 		},
+		{
+			"xy",
+			"",
+		},
 	}
 
 	for _, c := range cases {
@@ -63,7 +67,9 @@ func TestMatching(t *testing.T) {
 			var b bytes.Buffer
 			err := matching(c.word, &b, strings.NewReader(d.Cache))
 			if err != nil {
-				t.Fatal(err)
+				if c.expected != "" || !strings.HasSuffix(err.Error(), ": directory not found") {
+					t.Fatal(err)
+				}
 			}
 			if got := b.String(); c.expected != got {
 				t.Errorf("expected %q but got %q", c.expected, got)
@@ -122,7 +128,9 @@ func TestMatchingN(t *testing.T) {
 			var b bytes.Buffer
 			err := matchingN(c.word, c.num, &b, strings.NewReader(d.Cache))
 			if err != nil {
-				t.Fatal(err)
+				if c.expected != "" || !strings.HasSuffix(err.Error(), ": directory not found") {
+					t.Fatal(err)
+				}
 			}
 			if got := b.String(); c.expected != got {
 				t.Errorf("expected %q but got %q", c.expected, got)
@@ -161,6 +169,10 @@ func TestComplete(t *testing.T) {
 		{
 			"lc",
 			"lcd\n",
+		},
+		{
+			"xy",
+			"",
 		},
 	}
 
