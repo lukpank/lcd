@@ -40,39 +40,36 @@ import (
 )
 
 func main() {
+	if err := run(); err != nil {
+		fmt.Fprintf(os.Stderr, "lcd: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	compl := flag.String("complete", "", "list completions")
 	flag.Parse()
 	if flag.NArg() < 1 && *compl == "" {
-		return
+		return nil
 	}
 	f, err := os.Open(filepath.Join(os.Getenv("HOME"), ".lcd", "cache"))
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "lcd: %v\n", err)
-		os.Exit(1)
+		return err
 	}
 	defer f.Close()
 
 	if *compl != "" {
-		if err := complete(*compl, os.Stdout, f); err != nil {
-			fmt.Fprintf(os.Stderr, "lcd: %v\n", err)
-			os.Exit(1)
-		}
+		return complete(*compl, os.Stdout, f)
 	} else if nArg := flag.NArg(); nArg > 0 {
 		if nArg > 1 {
 			n, err := strconv.Atoi(flag.Arg(1))
 			if err == nil {
-				if err := matchingN(flag.Arg(0), n, os.Stdout, f); err != nil {
-					fmt.Fprintf(os.Stderr, "lcd: %v\n", err)
-					os.Exit(1)
-				}
-				return
+				return matchingN(flag.Arg(0), n, os.Stdout, f)
 			}
 		}
-		if err := matching(flag.Arg(0), os.Stdout, f); err != nil {
-			fmt.Fprintf(os.Stderr, "lcd: %v\n", err)
-			os.Exit(1)
-		}
+		return matching(flag.Arg(0), os.Stdout, f)
 	}
+	return nil
 }
 
 const pathSep = string(os.PathSeparator)
