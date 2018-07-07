@@ -94,6 +94,34 @@ const pathSep = string(os.PathSeparator)
 var pathSepB = []byte{os.PathSeparator}
 
 func matching(word string, w io.Writer, r io.Reader) error {
+	return matchingF(word, "", r, func(path string) bool {
+		fmt.Fprintln(w, path)
+		return true
+	})
+}
+
+func matchingN(word string, idx int, w io.Writer, r io.Reader) error {
+	i := 0
+	return matchingF(word, " "+strconv.Itoa(idx), r, func(path string) bool {
+		i++
+		if i == idx {
+			fmt.Fprintln(w, path)
+			return true
+		}
+		return false
+	})
+}
+
+func matchingPaths(word string, r io.Reader) ([]string, error) {
+	paths := []string{}
+	err := matchingF(word, "", r, func(path string) bool {
+		paths = append(paths, path)
+		return true
+	})
+	return paths, err
+}
+
+func matchingF(word, msgSuffix string, r io.Reader, fn func(string) bool) error {
 	suffix := []byte(pathSep + strings.TrimSuffix(word, pathSep))
 	found := false
 	sc := bufio.NewScanner(r)
@@ -103,50 +131,15 @@ func matching(word string, w io.Writer, r io.Reader) error {
 			continue
 		}
 		s := string(line)
-		st, err := os.Stat(s)
-		if err != nil {
-			continue
-		}
-		if st.IsDir() {
+		if st, err := os.Stat(s); err == nil && st.IsDir() && fn(s) {
 			found = true
-			fmt.Fprintln(w, s)
 		}
 	}
 	if err := sc.Err(); err != nil {
 		return err
 	}
 	if !found {
-		return fmt.Errorf("%q: directory not found", word)
-	}
-	return nil
-}
-
-func matchingN(word string, idx int, w io.Writer, r io.Reader) error {
-	suffix := []byte(pathSep + strings.TrimSuffix(word, pathSep))
-	found := false
-	i := 0
-	sc := bufio.NewScanner(r)
-	for sc.Scan() {
-		line := sc.Bytes()
-		if !bytes.HasSuffix(line, suffix) {
-			continue
-		}
-		s := string(line)
-		st, err := os.Stat(s)
-		if err != nil || !st.IsDir() {
-			continue
-		}
-		i++
-		if i == idx {
-			found = true
-			fmt.Fprintln(w, s)
-		}
-	}
-	if err := sc.Err(); err != nil {
-		return err
-	}
-	if !found {
-		return fmt.Errorf("%q %d: directory not found", word, idx)
+		return fmt.Errorf("%q%s: directory not found", word, msgSuffix)
 	}
 	return nil
 }
@@ -177,27 +170,6 @@ func complete(prefix string, w io.Writer, r io.Reader) error {
 		}
 	}
 	return sc.Err()
-}
-
-func matchingPaths(word string, r io.Reader) ([]string, error) {
-	suffix := []byte(pathSep + strings.TrimSuffix(word, pathSep))
-	paths := []string{}
-	sc := bufio.NewScanner(r)
-	for sc.Scan() {
-		line := bytes.TrimSuffix(sc.Bytes(), pathSepB)
-		if !bytes.HasSuffix(line, suffix) {
-			continue
-		}
-		s := string(line)
-		st, err := os.Stat(s)
-		if err != nil {
-			continue
-		}
-		if st.IsDir() {
-			paths = append(paths, s)
-		}
-	}
-	return paths, sc.Err()
 }
 
 func matchingWithMenu(word string, w io.Writer, r io.Reader) error {
