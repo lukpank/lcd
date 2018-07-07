@@ -62,7 +62,7 @@ func run() error {
 	if *outputFd != 0 {
 		output = os.NewFile(uintptr(*outputFd), fmt.Sprintf("/dev/fd/%d", *outputFd))
 	}
-	if flag.NArg() < 1 && *compl == "" {
+	if flag.NArg() < 1 && *compl == "" && !*menu {
 		return nil
 	}
 	f, err := os.Open(filepath.Join(os.Getenv("HOME"), ".lcd", "cache"))
@@ -114,6 +114,16 @@ func matchingN(word string, idx int, w io.Writer, r io.Reader) error {
 
 func matchingPaths(word string, r io.Reader) ([]string, error) {
 	paths := []string{}
+	if word == "" {
+		sc := bufio.NewScanner(r)
+		for sc.Scan() {
+			path := strings.TrimSuffix(sc.Text(), pathSep)
+			if st, err := os.Stat(path); err == nil && st.IsDir() {
+				paths = append(paths, path)
+			}
+		}
+		return paths, sc.Err()
+	}
 	err := matchingF(word, "", r, func(path string) bool {
 		paths = append(paths, path)
 		return true
