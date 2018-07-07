@@ -8,10 +8,10 @@
 
 lcd() {
     declare paths
-    paths=$("$HOME/go/bin/lcd" -- "$@")
-    if [ $(echo "${paths}" | wc -l) -eq 1 ]; then
+    paths=$("$HOME/go/bin/lcd" -menu -output_fd 3 -- "$@" 3>&1 >/dev/tty)
+    if [ $? -eq 0 ]; then
 	cd "${paths}"
-    else
+    elif [ ! -z "${paths}" ]; then
 	echo "${paths}"
     fi
 }
@@ -30,6 +30,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -37,18 +38,30 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/manifoldco/promptui"
 )
+
+var errSilentExit1 = errors.New("silent exit(1)")
 
 func main() {
 	if err := run(); err != nil {
-		fmt.Fprintf(os.Stderr, "lcd: %v\n", err)
+		if err != errSilentExit1 {
+			fmt.Fprintf(os.Stderr, "lcd: %v\n", err)
+		}
 		os.Exit(1)
 	}
 }
 
 func run() error {
 	compl := flag.String("complete", "", "list completions")
+	menu := flag.Bool("menu", false, "show menu if more than one directory")
+	outputFd := flag.Int("output_fd", 0, "menu output mode")
 	flag.Parse()
+	output := os.Stdout
+	if *outputFd != 0 {
+		output = os.NewFile(uintptr(*outputFd), fmt.Sprintf("/dev/fd/%d", *outputFd))
+	}
 	if flag.NArg() < 1 && *compl == "" {
 		return nil
 	}
@@ -59,15 +72,19 @@ func run() error {
 	defer f.Close()
 
 	if *compl != "" {
-		return complete(*compl, os.Stdout, f)
-	} else if nArg := flag.NArg(); nArg > 0 {
-		if nArg > 1 {
-			n, err := strconv.Atoi(flag.Arg(1))
-			if err == nil {
-				return matchingN(flag.Arg(0), n, os.Stdout, f)
-			}
+		return complete(*compl, output, f)
+	}
+	nArg := flag.NArg()
+	if nArg > 1 {
+		n, err := strconv.Atoi(flag.Arg(1))
+		if err == nil {
+			return matchingN(flag.Arg(0), n, output, f)
 		}
-		return matching(flag.Arg(0), os.Stdout, f)
+	}
+	if *menu {
+		return matchingWithMenu(flag.Arg(0), output, f)
+	} else if nArg > 0 {
+		return matching(flag.Arg(0), output, f)
 	}
 	return nil
 }
@@ -160,4 +177,62 @@ func complete(prefix string, w io.Writer, r io.Reader) error {
 		}
 	}
 	return sc.Err()
+}
+
+func matchingPaths(word string, r io.Reader) ([]string, error) {
+	suffix := []byte(pathSep + strings.TrimSuffix(word, pathSep))
+	paths := []string{}
+	sc := bufio.NewScanner(r)
+	for sc.Scan() {
+		line := bytes.TrimSuffix(sc.Bytes(), pathSepB)
+		if !bytes.HasSuffix(line, suffix) {
+			continue
+		}
+		s := string(line)
+		st, err := os.Stat(s)
+		if err != nil {
+			continue
+		}
+		if st.IsDir() {
+			paths = append(paths, s)
+		}
+	}
+	return paths, sc.Err()
+}
+
+func matchingWithMenu(word string, w io.Writer, r io.Reader) error {
+	paths, err := matchingPaths(word, r)
+	if err != nil {
+		return err
+	}
+	switch {
+	case len(paths) == 0:
+		return fmt.Errorf("%q: directory not found", word)
+	case len(paths) == 1:
+		fmt.Fprintln(w, paths[0])
+		return nil
+	case os.Getenv("TERM") == "dumb":
+		fmt.Fprintln(w, strings.Join(paths, "\n"))
+		return errSilentExit1
+	default:
+		prompt := promptui.Select{
+			Label: "Change directory",
+			Items: paths,
+			Size:  10,
+			Searcher: func(input string, index int) bool {
+				for _, s := range strings.Fields(input) {
+					if !strings.Contains(paths[index], s) {
+						return false
+					}
+				}
+				return true
+			},
+		}
+		_, result, err := prompt.Run()
+		if err != nil {
+			return err
+		}
+		fmt.Fprintln(w, result)
+		return nil
+	}
 }

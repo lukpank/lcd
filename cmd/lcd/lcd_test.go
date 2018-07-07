@@ -33,13 +33,13 @@ const cache = `
 /home/user/go/src/github.com/lukpank/lcd/cmd/lcd
 `
 
-func TestMatching(t *testing.T) {
-	d := newTestData(t, cache)
-	defer d.Close()
-	cases := []struct {
-		word     string
-		expected string
-	}{
+type matchingCase struct {
+	word     string
+	expected string
+}
+
+func matchingCases(d testData) []matchingCase {
+	return []matchingCase{
 		{
 			"lukpank",
 			d.ConvertPath("/home/user/go/src/github.com/lukpank") + "\n",
@@ -61,8 +61,12 @@ func TestMatching(t *testing.T) {
 			"",
 		},
 	}
+}
 
-	for _, c := range cases {
+func TestMatching(t *testing.T) {
+	d := newTestData(t, cache)
+	defer d.Close()
+	for _, c := range matchingCases(d) {
 		t.Run(c.word, func(t *testing.T) {
 			var b bytes.Buffer
 			err := matching(c.word, &b, strings.NewReader(d.Cache))
@@ -72,6 +76,28 @@ func TestMatching(t *testing.T) {
 				}
 			}
 			if got := b.String(); c.expected != got {
+				t.Errorf("expected %q but got %q", c.expected, got)
+			}
+		})
+	}
+}
+
+func TestMatchingPaths(t *testing.T) {
+	d := newTestData(t, cache)
+	defer d.Close()
+	for _, c := range matchingCases(d) {
+		t.Run(c.word, func(t *testing.T) {
+			paths, err := matchingPaths(c.word, strings.NewReader(d.Cache))
+			if err != nil {
+				if c.expected != "" || !strings.HasSuffix(err.Error(), ": directory not found") {
+					t.Fatal(err)
+				}
+			}
+			got := ""
+			if len(paths) > 0 {
+				got = strings.Join(paths, "\n") + "\n"
+			}
+			if c.expected != got {
 				t.Errorf("expected %q but got %q", c.expected, got)
 			}
 		})
