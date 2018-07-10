@@ -87,7 +87,7 @@ func TestMatchingPaths(t *testing.T) {
 	defer d.Close()
 	for _, c := range matchingCases(d) {
 		t.Run(c.word, func(t *testing.T) {
-			paths, err := matchingPaths(c.word, strings.NewReader(d.Cache))
+			paths, err := matchingPaths(c.word, strings.NewReader(d.Cache), true)
 			if err != nil {
 				if c.expected != "" || !strings.HasSuffix(err.Error(), ": directory not found") {
 					t.Fatal(err)

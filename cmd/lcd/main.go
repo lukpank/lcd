@@ -94,7 +94,7 @@ const pathSep = string(os.PathSeparator)
 var pathSepB = []byte{os.PathSeparator}
 
 func matching(word string, w io.Writer, r io.Reader) error {
-	return matchingF(word, "", r, func(path string) bool {
+	return matchingF(word, "", r, w != os.Stdout, func(path string) bool {
 		fmt.Fprintln(w, path)
 		return true
 	})
@@ -102,7 +102,7 @@ func matching(word string, w io.Writer, r io.Reader) error {
 
 func matchingN(word string, idx int, w io.Writer, r io.Reader) error {
 	i := 0
-	return matchingF(word, " "+strconv.Itoa(idx), r, func(path string) bool {
+	return matchingF(word, " "+strconv.Itoa(idx), r, w != os.Stdout, func(path string) bool {
 		i++
 		if i == idx {
 			fmt.Fprintln(w, path)
@@ -112,7 +112,7 @@ func matchingN(word string, idx int, w io.Writer, r io.Reader) error {
 	})
 }
 
-func matchingPaths(word string, r io.Reader) ([]string, error) {
+func matchingPaths(word string, r io.Reader, singleOut bool) ([]string, error) {
 	paths := []string{}
 	if word == "" {
 		sc := bufio.NewScanner(r)
@@ -124,16 +124,17 @@ func matchingPaths(word string, r io.Reader) ([]string, error) {
 		}
 		return paths, sc.Err()
 	}
-	err := matchingF(word, "", r, func(path string) bool {
+	err := matchingF(word, "", r, singleOut, func(path string) bool {
 		paths = append(paths, path)
 		return true
 	})
 	return paths, err
 }
 
-func matchingF(word, msgSuffix string, r io.Reader, fn func(string) bool) error {
+func matchingF(word, msgSuffix string, r io.Reader, singleOut bool, fn func(string) bool) error {
 	suffix := []byte(pathSep + strings.TrimSuffix(word, pathSep))
-	found := false
+	i := 0
+	first := ""
 	sc := bufio.NewScanner(r)
 	for sc.Scan() {
 		line := bytes.TrimSuffix(sc.Bytes(), pathSepB)
@@ -142,14 +143,20 @@ func matchingF(word, msgSuffix string, r io.Reader, fn func(string) bool) error 
 		}
 		s := string(line)
 		if st, err := os.Stat(s); err == nil && st.IsDir() && fn(s) {
-			found = true
+			i++
+			if i == 1 {
+				first = s
+			}
 		}
 	}
 	if err := sc.Err(); err != nil {
 		return err
 	}
-	if !found {
+	if i == 0 {
 		return fmt.Errorf("%q%s: directory not found", word, msgSuffix)
+	}
+	if i == 1 && singleOut {
+		fmt.Println(first)
 	}
 	return nil
 }
@@ -183,7 +190,7 @@ func complete(prefix string, w io.Writer, r io.Reader) error {
 }
 
 func matchingWithMenu(word string, w io.Writer, r io.Reader) error {
-	paths, err := matchingPaths(word, r)
+	paths, err := matchingPaths(word, r, w != os.Stdout)
 	if err != nil {
 		return err
 	}
@@ -208,6 +215,9 @@ func matchingWithMenu(word string, w io.Writer, r io.Reader) error {
 					}
 				}
 				return true
+			},
+			Templates: &promptui.SelectTemplates{
+				Selected: `{{.Selected}}`,
 			},
 		}
 		_, result, err := prompt.Run()
