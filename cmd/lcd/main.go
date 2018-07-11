@@ -39,6 +39,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/chzyer/readline"
 	"github.com/manifoldco/promptui"
 )
 
@@ -216,8 +217,17 @@ func matchingWithMenu(word string, w io.Writer, r io.Reader) error {
 				}
 				return true
 			},
+			StartInSearchMode: true,
+			Keys: &promptui.SelectKeys{
+				Prev:     promptui.Key{Code: promptui.KeyPrev, Display: "↑"},
+				Next:     promptui.Key{Code: promptui.KeyNext, Display: "↓"},
+				PageUp:   promptui.Key{Code: promptui.KeyBackward, Display: "←"},
+				PageDown: promptui.Key{Code: promptui.KeyForward, Display: "→"},
+				Search:   promptui.Key{Code: readline.CharCtrlU, Display: "Ctrl+U"},
+			},
 			Templates: &promptui.SelectTemplates{
 				Selected: `{{.Selected}}`,
+				Label:    `  {{.}}:`,
 			},
 		}
 		_, result, err := prompt.Run()
