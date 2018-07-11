@@ -211,7 +211,15 @@ func matchingWithMenu(word string, w io.Writer, r io.Reader) error {
 			Size:  10,
 			Searcher: func(input string, index int) bool {
 				for _, s := range strings.Fields(input) {
-					if !strings.Contains(paths[index], s) {
+					positive := true
+					if strings.HasPrefix(s, "!!") {
+						s = s[1:]
+					} else if strings.HasPrefix(s, "!") {
+						positive = false
+						s = s[1:]
+					}
+					contains := strings.Contains(paths[index], s)
+					if positive && !contains || !positive && contains {
 						return false
 					}
 				}
