@@ -8,7 +8,7 @@
 
 lcd() {
     declare paths
-    paths=$("$HOME/go/bin/lcd" -menu -output_fd 3 -- "$@" 3>&1 >/dev/tty)
+    paths=$("$HOME/go/bin/lcd" "$@")
     if [ $? -eq 0 ]; then
 	cd "${paths}"
     elif [ ! -z "${paths}" ]; then
@@ -38,6 +38,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/chzyer/readline"
 	"github.com/manifoldco/promptui"
@@ -56,14 +57,10 @@ func main() {
 
 func run() error {
 	compl := flag.String("complete", "", "list completions")
-	menu := flag.Bool("menu", false, "show menu if more than one directory")
-	outputFd := flag.Int("output_fd", 0, "menu output mode")
+	list := flag.Bool("l", false, "list paths instead of displaying a menu")
 	flag.Parse()
 	output := os.Stdout
-	if *outputFd != 0 {
-		output = os.NewFile(uintptr(*outputFd), fmt.Sprintf("/dev/fd/%d", *outputFd))
-	}
-	if flag.NArg() < 1 && *compl == "" && !*menu {
+	if flag.NArg() < 1 && *compl == "" && *list {
 		return nil
 	}
 	f, err := os.Open(filepath.Join(os.Getenv("HOME"), ".lcd", "cache"))
@@ -82,12 +79,36 @@ func run() error {
 			return matchingN(flag.Arg(0), n, output, f)
 		}
 	}
-	if *menu {
+	if !*list {
+		if !readline.IsTerminal(int(os.Stdout.Fd())) {
+			output, err = swapOutput()
+			if err != nil {
+				return err
+			}
+		}
 		return matchingWithMenu(flag.Arg(0), output, f)
 	} else if nArg > 0 {
 		return matching(flag.Arg(0), output, f)
 	}
 	return nil
+}
+
+// swapOutput replaces stdout with the tty and returns file connected
+// to original stdout
+func swapOutput() (*os.File, error) {
+	tty, err := os.OpenFile("/dev/tty", os.O_WRONLY, 0644)
+	if err != nil {
+		return nil, err
+	}
+	fd, err := syscall.Dup(syscall.Stdout)
+	if err != nil {
+		return nil, err
+	}
+	out := os.NewFile(uintptr(fd), "/dev/stdout")
+	if err := syscall.Dup2(int(tty.Fd()), syscall.Stdout); err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 const pathSep = string(os.PathSeparator)
