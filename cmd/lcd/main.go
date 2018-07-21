@@ -69,22 +69,23 @@ func run() error {
 	if compl.value != nil {
 		return complete(*compl.value, os.Stdout, f)
 	}
-	nArg := flag.NArg()
-	if nArg > 1 {
-		n, err := strconv.Atoi(flag.Arg(1))
-		if err == nil {
-			return matchingN(flag.Arg(0), n, os.Stdout, f)
-		}
-	}
-	if *list || os.Getenv("TERM") == "dumb" {
-		return matching(flag.Arg(0), os.Stdout, f)
-	}
+
 	output := os.Stdout
-	if !readline.IsTerminal(int(os.Stdout.Fd())) {
+	if !*list && !readline.IsTerminal(int(os.Stdout.Fd())) {
 		output, err = swapOutput()
 		if err != nil {
 			return err
 		}
+	}
+	nArg := flag.NArg()
+	if nArg > 1 {
+		n, err := strconv.Atoi(flag.Arg(1))
+		if err == nil {
+			return matchingN(flag.Arg(0), n, output, f)
+		}
+	}
+	if *list || os.Getenv("TERM") == "dumb" {
+		return matching(flag.Arg(0), output, f)
 	}
 	return matchingWithMenu(flag.Arg(0), output, f)
 }
