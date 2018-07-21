@@ -2,29 +2,10 @@
 // reserved.  This source code is licensed under the terms of the MIT
 // license. See LICENSE file for details.
 
-/*
-
-# Add the following to your ~/.bashrc:
-
-lcd() {
-    declare paths
-    paths=$("$HOME/go/bin/lcd" "$@")
-    if [ $? -eq 0 ]; then
-	cd "${paths}"
-    elif [ ! -z "${paths}" ]; then
-	echo "${paths}"
-    fi
-}
-
-_lcd() {
-    declare cur="${COMP_WORDS[COMP_CWORD]}"
-    COMPREPLY=( $("$HOME/go/bin/lcd" -complete "${cur}") )
-}
-
-complete -F _lcd lcd
-
-*/
-
+// lcd -- lupan's change directory
+//
+// lcd is a tool to easily find a directory in your tree of deeply
+// nested source projects (i.e., with less typing).
 package main
 
 import (
