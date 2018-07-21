@@ -60,7 +60,6 @@ func run() error {
 	flag.Var(&compl, "complete", "list completions")
 	list := flag.Bool("l", false, "list paths instead of displaying a menu")
 	flag.Parse()
-	output := os.Stdout
 	f, err := os.Open(filepath.Join(os.Getenv("HOME"), ".lcd", "cache"))
 	if err != nil {
 		return err
@@ -68,18 +67,19 @@ func run() error {
 	defer f.Close()
 
 	if compl.value != nil {
-		return complete(*compl.value, output, f)
+		return complete(*compl.value, os.Stdout, f)
 	}
 	nArg := flag.NArg()
 	if nArg > 1 {
 		n, err := strconv.Atoi(flag.Arg(1))
 		if err == nil {
-			return matchingN(flag.Arg(0), n, output, f)
+			return matchingN(flag.Arg(0), n, os.Stdout, f)
 		}
 	}
 	if *list || os.Getenv("TERM") == "dumb" {
-		return matching(flag.Arg(0), output, f)
+		return matching(flag.Arg(0), os.Stdout, f)
 	}
+	output := os.Stdout
 	if !readline.IsTerminal(int(os.Stdout.Fd())) {
 		output, err = swapOutput()
 		if err != nil {
