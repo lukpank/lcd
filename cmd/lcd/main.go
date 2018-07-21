@@ -77,7 +77,7 @@ func run() error {
 			return matchingN(flag.Arg(0), n, output, f)
 		}
 	}
-	if *list {
+	if *list || os.Getenv("TERM") == "dumb" {
 		return matching(flag.Arg(0), output, f)
 	}
 	if !readline.IsTerminal(int(os.Stdout.Fd())) {
@@ -247,9 +247,6 @@ func matchingWithMenu(word string, w io.Writer, r io.Reader) error {
 	case len(paths) == 1:
 		fmt.Fprintln(w, paths[0])
 		return nil
-	case os.Getenv("TERM") == "dumb":
-		fmt.Fprintln(w, strings.Join(paths, "\n"))
-		return errSilentExit1
 	default:
 		prompt := promptui.Select{
 			Label: "Change directory",
