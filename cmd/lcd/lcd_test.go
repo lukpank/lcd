@@ -70,10 +70,15 @@ func TestMatching(t *testing.T) {
 		t.Run(c.word, func(t *testing.T) {
 			var b bytes.Buffer
 			err := matching(c.word, &b, strings.NewReader(d.Cache))
-			if err != nil {
+			n := strings.Count(c.expected, "\n")
+			switch {
+			case n != 1 && err == errSilentExit1:
+			case err != nil:
 				if c.expected != "" || !strings.HasSuffix(err.Error(), ": directory not found") {
 					t.Fatal(err)
 				}
+			case n != 1:
+				t.Fatal("expected errSilentExit1")
 			}
 			if got := b.String(); c.expected != got {
 				t.Errorf("expected %q but got %q", c.expected, got)

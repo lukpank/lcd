@@ -61,9 +61,6 @@ func run() error {
 	list := flag.Bool("l", false, "list paths instead of displaying a menu")
 	flag.Parse()
 	output := os.Stdout
-	if flag.NArg() < 1 && compl.value == nil && *list {
-		return nil
-	}
 	f, err := os.Open(filepath.Join(os.Getenv("HOME"), ".lcd", "cache"))
 	if err != nil {
 		return err
@@ -80,18 +77,16 @@ func run() error {
 			return matchingN(flag.Arg(0), n, output, f)
 		}
 	}
-	if !*list {
-		if !readline.IsTerminal(int(os.Stdout.Fd())) {
-			output, err = swapOutput()
-			if err != nil {
-				return err
-			}
-		}
-		return matchingWithMenu(flag.Arg(0), output, f)
-	} else if nArg > 0 {
+	if *list {
 		return matching(flag.Arg(0), output, f)
 	}
-	return nil
+	if !readline.IsTerminal(int(os.Stdout.Fd())) {
+		output, err = swapOutput()
+		if err != nil {
+			return err
+		}
+	}
+	return matchingWithMenu(flag.Arg(0), output, f)
 }
 
 type strValue struct {
@@ -133,10 +128,20 @@ const pathSep = string(os.PathSeparator)
 var pathSepB = []byte{os.PathSeparator}
 
 func matching(word string, w io.Writer, r io.Reader) error {
-	return matchingF(word, "", r, w != os.Stdout, func(path string) bool {
+	i := 0
+	err := matchingF(word, "", r, w != os.Stdout, func(path string) bool {
+		i++
 		fmt.Fprintln(w, path)
 		return true
 	})
+	switch {
+	case err != nil:
+		return err
+	case i == 1:
+		return nil
+	default:
+		return errSilentExit1
+	}
 }
 
 func matchingN(word string, idx int, w io.Writer, r io.Reader) error {
@@ -171,7 +176,10 @@ func matchingPaths(word string, r io.Reader, singleOut bool) ([]string, error) {
 }
 
 func matchingF(word, msgSuffix string, r io.Reader, singleOut bool, fn func(string) bool) error {
-	suffix := []byte(pathSep + strings.TrimSuffix(word, pathSep))
+	var suffix []byte
+	if len(word) > 0 {
+		suffix = []byte(pathSep + strings.TrimSuffix(word, pathSep))
+	}
 	i := 0
 	first := ""
 	sc := bufio.NewScanner(r)
