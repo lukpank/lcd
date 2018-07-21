@@ -56,11 +56,12 @@ func main() {
 }
 
 func run() error {
-	compl := flag.String("complete", "", "list completions")
+	var compl strValue
+	flag.Var(&compl, "complete", "list completions")
 	list := flag.Bool("l", false, "list paths instead of displaying a menu")
 	flag.Parse()
 	output := os.Stdout
-	if flag.NArg() < 1 && *compl == "" && *list {
+	if flag.NArg() < 1 && compl.value == nil && *list {
 		return nil
 	}
 	f, err := os.Open(filepath.Join(os.Getenv("HOME"), ".lcd", "cache"))
@@ -69,8 +70,8 @@ func run() error {
 	}
 	defer f.Close()
 
-	if *compl != "" {
-		return complete(*compl, output, f)
+	if compl.value != nil {
+		return complete(*compl.value, output, f)
 	}
 	nArg := flag.NArg()
 	if nArg > 1 {
@@ -90,6 +91,22 @@ func run() error {
 	} else if nArg > 0 {
 		return matching(flag.Arg(0), output, f)
 	}
+	return nil
+}
+
+type strValue struct {
+	value *string
+}
+
+func (s *strValue) String() string {
+	if s.value == nil {
+		return ""
+	}
+	return *s.value
+}
+
+func (s *strValue) Set(value string) error {
+	s.value = &value
 	return nil
 }
 
