@@ -4,6 +4,11 @@
 nested source projects (i.e., with less typing).
 
 
+## Demo
+
+<a href="https://asciinema.org/a/aU0m0jwFPPlL1pQvDdgjHrSYF" target="_blank"><img src="https://asciinema.org/a/aU0m0jwFPPlL1pQvDdgjHrSYF.png" width="600"/></a>
+
+
 ## Installation
 
 To install lcd you have to run
