@@ -69,16 +69,16 @@ Project paths can be long and inconvenient to type.
    (provided your GOPATH is `~/go`) you have to write
 
    ```
-   ~$ cd ~/go/src/golang.org/x/tools/cmd/guru
-   guru$ █
+   ~ $ cd ~/go/src/golang.org/x/tools/cmd/guru
+   guru $ █
    ```
 
    with `lcd` you just write
 
    ```
-   $ lcd guru
+   ~ $ lcd guru
    /home/user/go/src/golang.org/x/tools/cmd/guru
-   guru$ █
+   guru $ █
    ```
 
    that was a simplest case: as there were only single directory
@@ -88,7 +88,7 @@ Project paths can be long and inconvenient to type.
 2. But if we want to enter into the `lcd` directory we write
 
    ```
-   ~$ lcd lcd
+   ~ $ lcd lcd
    Search: █
      Change directory:
      ▸ /home/user/go/src/github.com/lukpank/lcd
@@ -110,9 +110,9 @@ Project paths can be long and inconvenient to type.
    write
 
    ```
-   $ lcd cmd/lcd
+   ~ $ lcd cmd/lcd
    /home/user/go/src/github.com/lukpank/lcd/cmd/lcd
-   lcd$ █
+   lcd $ █
    ```
 
    and avoid the selection with menu (as there is only one path ending
@@ -123,9 +123,9 @@ Project paths can be long and inconvenient to type.
    menu so we can write
 
    ```
-   $ lcd lcd 2
+   ~ $ lcd lcd 2
    /home/user/go/src/github.com/lukpank/lcd/cmd/lcd
-   lcd$ █
+   lcd $ █
    ```
 
    to enter to the second of the directories. (note: the order may
@@ -135,9 +135,9 @@ Project paths can be long and inconvenient to type.
 5. We configured `lcd` with bash completions so we can write
 
    ```
-   ~$ lcd glpk<TAB><TAB>
+   ~ $ lcd glpk<TAB><TAB>
    glpk       glpk-4.65
-   ~$ lcd glpk█
+   ~ $ lcd glpk█
    ```
 
    and after hitting `TAB` twice the list of possible completion of
@@ -148,7 +148,7 @@ Project paths can be long and inconvenient to type.
    `cmd` by writing
 
    ```
-   $ lcd cmd/<TAB><TAB>█
+   ~ $ lcd cmd/<TAB><TAB>█
    Display all 101 possibilities? (y or n)
    ```
 
@@ -161,7 +161,7 @@ Project paths can be long and inconvenient to type.
    also filter with one of more words like below:
 
    ```
-   $ lcd cmd
+   ~ $ lcd cmd
    Search: github.com golang█
      Change directory:
      ▸ /home/user/go/src/github.com/golang/freetype/cmd
